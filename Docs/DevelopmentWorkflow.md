@@ -26,7 +26,9 @@
 ## Current setup notes
 - Unity Editor: 6000.3.22f1.
 - Render pipeline: URP.
-- Intended build target: Android / Meta Quest 3.
-- XR Management 4.5.3 and OpenXR 1.16.1 are pinned as Unity 6 released package versions. OpenXR is not ready yet: the Unity editor does not compile/import its runtime assembly (the OpenXR editor hook reports a missing `UnityEngine.XR.OpenXR` namespace), so the Android loader is still unassigned. XRI and XR Hands are not installed; attempts to add them exposed the same missing OpenXR namespace.
-- XR Interaction Toolkit and Meta XR All-in-One SDK are not yet part of the project. Resolve the editor package/provider compatibility issue before adding XRI or deciding whether the Meta SDK is needed. Add it only after deciding which Meta-specific features are needed and using a reproducible version/source.
-- No custom Build Profile asset is configured yet; Unity MCP exposed profile listing/activation but not profile creation. Create the Quest 3 Android profile in File > Build Profiles once the provider setup is resolved. Keep build output under `Builds/` (ignored by git) and do not commit signing material.
+- Intended build target: Android / Meta Quest 3. The user confirmed a successful Build and Run on the connected Quest 3 using Unity's Android build profile.
+- XR Management 4.5.3, OpenXR 1.16.1, and XR Interaction Toolkit 3.7.0 are pinned in `Packages/manifest.json`. The Android XR loader is assigned and initializes on start. OpenXR has the Quest and Touch controller profiles enabled.
+- XRI Starter Assets are imported under `Assets/Samples/XR Interaction Toolkit/3.7.0/Starter Assets`. Use the included XR Origin as the player rig baseline. Keep gameplay independent of XRI types as described above.
+- A Meta XR scoped registry is configured. The Meta XR All-in-One package was not installed through that registry; add a Meta package only when a concrete feature requires it and its supported source/version is verified.
+- Build and run only through Unity's Android build profile. Do not create or use a project-local custom build profile or a different build route unless the user changes this instruction. Do not commit generated builds or signing material.
+- `Assets/Scenes/QuestPlayerTest.unity` is the basic empty-environment player scene. Teleportation and snap turn are enabled; smooth move and continuous turn are disabled. The user-confirmed run validates installation and launch, while tracking and interaction behavior still need direct headset validation as the player is developed.
