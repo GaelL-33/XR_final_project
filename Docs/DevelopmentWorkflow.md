@@ -27,6 +27,6 @@
 - Unity Editor: 6000.3.22f1.
 - Render pipeline: URP.
 - Intended build target: Android / Meta Quest 3.
-- XR Management and OpenXR packages are present. OpenXR loader assignment is still pending: the editor could not instantiate the provider, and XRI currently remains uninstalled after compilation errors.
+- XR Management 4.5.3 and OpenXR 1.16.1 are pinned as Unity 6 released package versions. OpenXR is not ready yet: the Unity editor does not compile/import its runtime assembly (the OpenXR editor hook reports a missing `UnityEngine.XR.OpenXR` namespace), so the Android loader is still unassigned. XRI and XR Hands are not installed; attempts to add them exposed the same missing OpenXR namespace.
 - XR Interaction Toolkit and Meta XR All-in-One SDK are not yet part of the project. Resolve the editor package/provider compatibility issue before adding XRI or deciding whether the Meta SDK is needed. Add it only after deciding which Meta-specific features are needed and using a reproducible version/source.
 - No custom Build Profile asset is configured yet; Unity MCP exposed profile listing/activation but not profile creation. Create the Quest 3 Android profile in File > Build Profiles once the provider setup is resolved. Keep build output under `Builds/` (ignored by git) and do not commit signing material.
