@@ -31,4 +31,6 @@ Pocket Labyrinthe is a short, seated-or-standing VR puzzle for Meta Quest 3. The
 ## Current prototype notes
 - The Android scene list currently points to `Assets/Scenes/SampleScene.unity`; the corridor prototype is authored there. Use the Unity menu item **Pocket Labyrinthe > Generate Corridor Prototype Scene** only when regenerating this scene after edits to its editor generator.
 - Keep the player marker and miniature synchronized through `MazeScaleMapper`, and world/miniature mechanism visuals subscribed to `MazeState` using stable IDs from `MazeDefinition`. Device input stays behind `XRControllerMiniatureInteraction`.
+- The corridor floor's textured top surface is aligned to world Y=0. Its `TeleportationArea` must use the XRI `Teleport` interaction layer to match the rig's teleport rays; keep the provider and interaction manager explicitly assigned.
+- The left-hand map is presented flat and facing world-up above the controller palm, with its horizontal heading following the controller. The right-hand miniature pointer is a sampled curved path; the right controller B (`secondaryButton`) toggles the targeted mechanism.
 - Do not start a player build unless the current task explicitly asks for it. If asked, build or run only through Unity's existing Android build profile UI.

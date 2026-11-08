@@ -24,7 +24,7 @@ World View   Miniature View
 
 `MazeState` is the source of truth. The full-scale environment and miniature subscribe to state changes and render them at their own scale. The player marker is derived by transforming the XR rig's tracking-space position into maze-local coordinates and then into miniature-local coordinates. Keep handedness, offsets, and scale in serialized configuration rather than scattered constants.
 
-The first corridor prototype follows this boundary: `MazeDefinition` is the authored ScriptableObject, `MazeState` owns transient mechanism states, and the world and miniature mechanism views subscribe using a stable mechanism ID. `XRControllerMiniatureInteraction` is the controller adapter; it sends a toggle to `MazeState` rather than moving scene objects directly. `MazeScaleMapper` applies the configured 1:100 transform to the player marker. Keep future hand-tracking input behind the same gameplay command boundary.
+The first corridor prototype follows this boundary: `MazeDefinition` is the authored ScriptableObject, `MazeState` owns transient mechanism states, and the world and miniature mechanism views subscribe using a stable mechanism ID. `XRControllerMiniatureInteraction` is the controller adapter; it sends a toggle to `MazeState` rather than moving scene objects directly. `MazeScaleMapper` applies the configured 1:100 transform to the player marker. The left-hand miniature presentation is kept flat and facing world-up for a palm-up hold, while its yaw follows the controller. Keep future hand-tracking input behind the same gameplay command boundary.
 
 ## Suggested folder layout
 

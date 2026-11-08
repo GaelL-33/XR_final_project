@@ -6,6 +6,7 @@ using Unity.XR.CoreUtils;
 using UnityEngine.SceneManagement;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
 using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
 
 public static class BuildCorridorPrototype
@@ -54,7 +55,9 @@ public static class BuildCorridorPrototype
         var mazeRoot = new GameObject("World Maze Mapping Root").transform;
         mazeRoot.SetParent(root.transform, false);
         BuildWorldCorridor(mazeRoot, mazeState, interactionManager, definition);
-        BuildPlayerAndMiniature(root.transform, mazeRoot, mazeState, definition, interactionManager);
+        var teleportationProvider = BuildPlayerAndMiniature(root.transform, mazeRoot, mazeState, definition, interactionManager);
+        foreach (var teleportationArea in mazeRoot.GetComponentsInChildren<TeleportationArea>(true))
+            teleportationArea.teleportationProvider = teleportationProvider;
 
         EditorSceneManager.MarkSceneDirty(activeScene);
         EditorSceneManager.SaveScene(activeScene);
@@ -69,8 +72,10 @@ public static class BuildCorridorPrototype
         var wallPrefab = LoadPrefab(WallPrefabPath);
         var lampPrefab = LoadPrefab(WallLampPrefabPath);
 
-        InstantiateAsset(floorPrefab, mazeRoot, new Vector3(3f, 0f, -3f), Quaternion.identity, "Entry Floor");
-        InstantiateAsset(floorPrefab, mazeRoot, new Vector3(3f, 0f, 0f), Quaternion.identity, "Exit Floor");
+        var entryFloor = InstantiateAsset(floorPrefab, mazeRoot, new Vector3(3f, 0f, -3f), Quaternion.identity, "Entry Floor");
+        ConfigureFloorTeleportation(entryFloor, interactionManager);
+        var exitFloor = InstantiateAsset(floorPrefab, mazeRoot, new Vector3(3f, 0f, 0f), Quaternion.identity, "Exit Floor");
+        ConfigureFloorTeleportation(exitFloor, interactionManager);
 
         for (var segment = 0; segment < 2; segment++)
         {
@@ -93,19 +98,33 @@ public static class BuildCorridorPrototype
         InstantiateAsset(lampPrefab, mazeRoot, new Vector3(0.25f, 2.2f, 1.5f), Quaternion.Euler(0f, 90f, 0f), "Exit Lamp Left");
         InstantiateAsset(lampPrefab, mazeRoot, new Vector3(2.75f, 2.2f, 1.5f), Quaternion.Euler(0f, -90f, 0f), "Exit Lamp Right");
 
-        foreach (var floor in mazeRoot.GetComponentsInChildren<BoxCollider>())
-        {
-            if (floor.gameObject.name.Contains("Floor"))
-            {
-                floor.center = new Vector3(floor.center.x, 0f, floor.center.z);
-                floor.size = new Vector3(floor.size.x, 0.12f, floor.size.z);
-                var teleportArea = floor.gameObject.AddComponent<TeleportationArea>();
-                teleportArea.interactionManager = interactionManager;
-            }
-        }
     }
 
-    private static void BuildPlayerAndMiniature(Transform root, Transform mazeRoot, MazeState mazeState,
+    private static void ConfigureFloorTeleportation(GameObject floor, XRInteractionManager interactionManager)
+    {
+        const float surfaceColliderThickness = 0.02f;
+        var meshFilter = floor.GetComponent<MeshFilter>();
+        var collider = floor.GetComponent<BoxCollider>();
+        if (meshFilter == null || meshFilter.sharedMesh == null || collider == null)
+            throw new System.InvalidOperationException($"Floor prefab '{floor.name}' needs a mesh and BoxCollider.");
+
+        var localSurfaceHeight = meshFilter.sharedMesh.bounds.max.y;
+        var localPosition = floor.transform.localPosition;
+        localPosition.y -= localSurfaceHeight;
+        floor.transform.localPosition = localPosition;
+
+        collider.center = new Vector3(collider.center.x, localSurfaceHeight - surfaceColliderThickness * 0.5f, collider.center.z);
+        collider.size = new Vector3(collider.size.x, surfaceColliderThickness, collider.size.z);
+
+        var teleportationArea = floor.AddComponent<TeleportationArea>();
+        teleportationArea.interactionManager = interactionManager;
+        var teleportMask = InteractionLayerMask.GetMask("Teleport");
+        if (teleportMask == 0)
+            throw new System.InvalidOperationException("The XRI 'Teleport' interaction layer could not be found.");
+        teleportationArea.interactionLayers = teleportMask;
+    }
+
+    private static TeleportationProvider BuildPlayerAndMiniature(Transform root, Transform mazeRoot, MazeState mazeState,
         MazeDefinition definition, XRInteractionManager interactionManager)
     {
         definition.TryGetMechanism(MechanismId, out var mechanism);
@@ -119,6 +138,10 @@ public static class BuildCorridorPrototype
         rig.transform.localPosition = new Vector3(1.5f, 0f, -1.5f);
         rig.transform.localRotation = Quaternion.identity;
         rig.SetActive(true);
+        var teleportationProvider = rig.GetComponentInChildren<TeleportationProvider>(true);
+        if (teleportationProvider == null)
+            throw new System.InvalidOperationException("The XR Origin prefab has no TeleportationProvider.");
+
         var xrOrigin = rig.GetComponent<XROrigin>();
         if (xrOrigin != null)
             xrOrigin.RequestedTrackingOriginMode = XROrigin.TrackingOriginMode.Floor;
@@ -131,10 +154,10 @@ public static class BuildCorridorPrototype
         var miniRootObject = new GameObject("Left Hand Miniature");
         var miniRoot = miniRootObject.transform;
         miniRoot.SetParent(root, false);
-        miniRoot.localPosition = new Vector3(0.25f, 1.1f, -1.1f);
+        miniRoot.localPosition = new Vector3(1.5f, 1.2f, -1.45f);
         miniRoot.localScale = Vector3.one;
 
-        var whiteMaterial = LoadOrCreateMaterial(MiniatureMaterialPath, Color.white);
+        var whiteMaterial = LoadOrCreateMaterial(MiniatureMaterialPath, Color.white, "Universal Render Pipeline/Lit");
         var markerMaterial = LoadOrCreateMaterial(MarkerMaterialPath, new Color(1f, 0.28f, 0.12f, 1f));
         var pointerMaterial = LoadOrCreateMaterial(PointerMaterialPath, new Color(0.25f, 0.8f, 1f, 1f));
 
@@ -200,12 +223,14 @@ public static class BuildCorridorPrototype
         interaction.mazeState = mazeState;
         interaction.targetLayers = 1 << targetLayer;
         interaction.rayLength = 1.5f;
-        interaction.leftHandMiniatureOffset = new Vector3(0f, 0.1f, 0.18f);
+        interaction.leftHandMiniatureHeightAboveController = 0.025f;
+        interaction.leftHandMiniatureForwardOffset = 0.05f;
+        interaction.pointerCurveSag = 0.2f;
 
         var pointer = interactionObject.AddComponent<LineRenderer>();
         pointer.enabled = false;
         pointer.useWorldSpace = true;
-        pointer.positionCount = 2;
+        pointer.positionCount = 17;
         pointer.sharedMaterial = pointerMaterial;
         pointer.startColor = new Color(0.25f, 0.8f, 1f, 0.9f);
         pointer.endColor = new Color(0.25f, 0.8f, 1f, 0.25f);
@@ -217,6 +242,10 @@ public static class BuildCorridorPrototype
 
         foreach (var interactable in rig.GetComponentsInChildren<XRBaseInteractable>(true))
             interactable.interactionManager = interactionManager;
+        foreach (var interactor in rig.GetComponentsInChildren<XRBaseInteractor>(true))
+            interactor.interactionManager = interactionManager;
+
+        return teleportationProvider;
     }
 
     private static void ConfigureComfortableLocomotion(GameObject rig)
@@ -308,21 +337,27 @@ public static class BuildCorridorPrototype
         return definition;
     }
 
-    private static Material LoadOrCreateMaterial(string path, Color color)
+    private static Material LoadOrCreateMaterial(string path, Color color, string shaderName = "Universal Render Pipeline/Unlit")
     {
         var material = AssetDatabase.LoadAssetAtPath<Material>(path);
-        if (material != null)
-            return material;
-
-        var shader = Shader.Find("Universal Render Pipeline/Unlit");
+        var shader = Shader.Find(shaderName);
         if (shader == null)
-            throw new System.InvalidOperationException("URP Unlit shader could not be found for the miniature model.");
+            throw new System.InvalidOperationException($"Required shader '{shaderName}' could not be found for the prototype.");
 
-        material = new Material(shader);
-        material.name = Path.GetFileNameWithoutExtension(path);
+        if (material == null)
+        {
+            material = new Material(shader);
+            material.name = Path.GetFileNameWithoutExtension(path);
+            AssetDatabase.CreateAsset(material, path);
+        }
+        else if (material.shader != shader)
+        {
+            material.shader = shader;
+        }
+
         material.SetColor("_BaseColor", color);
         material.enableInstancing = true;
-        AssetDatabase.CreateAsset(material, path);
+        EditorUtility.SetDirty(material);
         return material;
     }
 
