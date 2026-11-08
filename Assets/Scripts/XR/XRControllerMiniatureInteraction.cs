@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using UnityEngine.XR.Interaction.Toolkit.Interactors.Visuals;
 using UnityEngine.XR;
 
 public sealed class XRControllerMiniatureInteraction : MonoBehaviour
@@ -11,8 +13,8 @@ public sealed class XRControllerMiniatureInteraction : MonoBehaviour
     public MazeState mazeState;
     public LayerMask targetLayers;
     public LineRenderer pointerLine;
-    [Min(0f)] public float leftHandMiniatureHeightAboveController = 0.025f;
-    [Min(0f)] public float leftHandMiniatureForwardOffset = 0.05f;
+    public Vector3 leftHandMiniatureLocalPosition = new Vector3(0.025f, 0.012f, 0.01f);
+    public Vector3 leftHandMiniatureLocalEulerOffset = new Vector3(0f, 0f, -90f);
     [Min(0.1f)] public float rayLength = 1.5f;
     [Min(0f)] public float pointerCurveSag = 0.2f;
 
@@ -21,6 +23,11 @@ public sealed class XRControllerMiniatureInteraction : MonoBehaviour
     private readonly Vector3[] pointerPoints = new Vector3[PointerCurveSegments + 1];
     private MiniatureWallTarget currentTarget;
     private bool previousSecondaryButton;
+
+    private void Awake()
+    {
+        HideRightHandStraightRay();
+    }
 
     private void Update()
     {
@@ -40,18 +47,42 @@ public sealed class XRControllerMiniatureInteraction : MonoBehaviour
         if (miniatureRoot == null || !TryGetPose(XRNode.LeftHand, ref leftHand, out var position, out var rotation))
             return;
 
-        var flatForward = Vector3.ProjectOnPlane(rotation * Vector3.forward, Vector3.up);
-        if (flatForward.sqrMagnitude < 0.001f)
-            flatForward = Vector3.ProjectOnPlane(trackingOrigin.forward, Vector3.up);
-        if (flatForward.sqrMagnitude < 0.001f)
-            flatForward = Vector3.forward;
-
-        flatForward.Normalize();
-        var palmUpRotation = Quaternion.LookRotation(flatForward, Vector3.up);
-        var miniaturePosition = position + Vector3.up * leftHandMiniatureHeightAboveController +
-                                flatForward * leftHandMiniatureForwardOffset;
-        miniatureRoot.SetPositionAndRotation(miniaturePosition, palmUpRotation);
+        var miniaturePosition = position + rotation * leftHandMiniatureLocalPosition;
+        var miniatureRotation = rotation * Quaternion.Euler(leftHandMiniatureLocalEulerOffset);
+        miniatureRoot.SetPositionAndRotation(miniaturePosition, miniatureRotation);
         Physics.SyncTransforms();
+    }
+
+    private void HideRightHandStraightRay()
+    {
+        if (trackingOrigin == null)
+            return;
+
+        foreach (var lineVisual in trackingOrigin.GetComponentsInChildren<XRInteractorLineVisual>(true))
+        {
+            if (!IsUnderRightController(lineVisual.transform))
+                continue;
+
+            var rayInteractor = lineVisual.GetComponent<XRRayInteractor>();
+            if (rayInteractor == null || rayInteractor.lineType != XRRayInteractor.LineType.StraightLine)
+                continue;
+
+            lineVisual.enabled = false;
+            var lineRenderer = lineVisual.GetComponent<LineRenderer>();
+            if (lineRenderer != null)
+                lineRenderer.enabled = false;
+        }
+    }
+
+    private bool IsUnderRightController(Transform target)
+    {
+        for (var current = target; current != null && current != trackingOrigin; current = current.parent)
+        {
+            if (current.name == "Right Controller")
+                return true;
+        }
+
+        return false;
     }
 
     private void UpdatePointerAndInput()

@@ -16,6 +16,8 @@ public static class BuildCorridorPrototype
     private const string MiniatureMaterialPath = "Assets/Art/MiniatureWhite.mat";
     private const string MarkerMaterialPath = "Assets/Art/MiniatureMarker.mat";
     private const string PointerMaterialPath = "Assets/Art/MagicPointer.mat";
+    private const string NightSkyboxMaterialPath = "Assets/Art/NightSkybox.mat";
+    private const string NightSkyboxTexturePath = "Assets/Art/NightSkyboxCube.png";
     private const string RigPrefabPath = "Assets/Samples/XR Interaction Toolkit/3.7.0/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
     private const string FloorPrefabPath = "Assets/Maze/Prefabs/Floor_3M.prefab";
     private const string WallPrefabPath = "Assets/Maze/Prefabs/Wall_3M.prefab";
@@ -41,6 +43,8 @@ public static class BuildCorridorPrototype
         var oldMainCamera = GameObject.FindGameObjectWithTag("MainCamera");
         if (oldMainCamera != null)
             Object.DestroyImmediate(oldMainCamera);
+
+        ConfigureNightEnvironment();
 
         var root = new GameObject(PrototypeRootName);
         var definition = LoadOrCreateDefinition();
@@ -93,10 +97,10 @@ public static class BuildCorridorPrototype
         gateView.loweredLocalOffset = Vector3.down * (mechanism != null ? mechanism.lowerDistance : 5f);
         gateView.animationSeconds = mechanism != null ? mechanism.animationSeconds : 0.45f;
 
-        InstantiateAsset(lampPrefab, mazeRoot, new Vector3(0.25f, 2.2f, -1.5f), Quaternion.Euler(0f, 90f, 0f), "Entry Lamp Left");
-        InstantiateAsset(lampPrefab, mazeRoot, new Vector3(2.75f, 2.2f, -1.5f), Quaternion.Euler(0f, -90f, 0f), "Entry Lamp Right");
-        InstantiateAsset(lampPrefab, mazeRoot, new Vector3(0.25f, 2.2f, 1.5f), Quaternion.Euler(0f, 90f, 0f), "Exit Lamp Left");
-        InstantiateAsset(lampPrefab, mazeRoot, new Vector3(2.75f, 2.2f, 1.5f), Quaternion.Euler(0f, -90f, 0f), "Exit Lamp Right");
+        AddWarmLampLight(InstantiateAsset(lampPrefab, mazeRoot, new Vector3(0.25f, 2.2f, -1.5f), Quaternion.Euler(0f, 90f, 0f), "Entry Lamp Left"), "Entry Lamp Left Warm Light");
+        AddWarmLampLight(InstantiateAsset(lampPrefab, mazeRoot, new Vector3(2.75f, 2.2f, -1.5f), Quaternion.Euler(0f, -90f, 0f), "Entry Lamp Right"), "Entry Lamp Right Warm Light");
+        AddWarmLampLight(InstantiateAsset(lampPrefab, mazeRoot, new Vector3(0.25f, 2.2f, 1.5f), Quaternion.Euler(0f, 90f, 0f), "Exit Lamp Left"), "Exit Lamp Left Warm Light");
+        AddWarmLampLight(InstantiateAsset(lampPrefab, mazeRoot, new Vector3(2.75f, 2.2f, 1.5f), Quaternion.Euler(0f, -90f, 0f), "Exit Lamp Right"), "Exit Lamp Right Warm Light");
 
     }
 
@@ -122,6 +126,54 @@ public static class BuildCorridorPrototype
         if (teleportMask == 0)
             throw new System.InvalidOperationException("The XRI 'Teleport' interaction layer could not be found.");
         teleportationArea.interactionLayers = teleportMask;
+    }
+
+    private static void ConfigureNightEnvironment()
+    {
+        var shader = Shader.Find("Skybox/Cubemap");
+        var cubemap = AssetDatabase.LoadAssetAtPath<Cubemap>(NightSkyboxTexturePath);
+        if (shader == null || cubemap == null)
+            throw new System.InvalidOperationException("The night skybox shader or cubemap asset is missing.");
+
+        var material = AssetDatabase.LoadAssetAtPath<Material>(NightSkyboxMaterialPath);
+        if (material == null)
+        {
+            material = new Material(shader) { name = "NightSkybox" };
+            AssetDatabase.CreateAsset(material, NightSkyboxMaterialPath);
+        }
+
+        material.shader = shader;
+        material.SetTexture("_Tex", cubemap);
+        material.SetColor("_Tint", new Color(0.78f, 0.82f, 1f, 1f));
+        material.SetFloat("_Exposure", 0.8f);
+        material.SetFloat("_Rotation", 0f);
+        EditorUtility.SetDirty(material);
+
+        RenderSettings.skybox = material;
+        RenderSettings.ambientIntensity = 0.55f;
+        RenderSettings.sun = null;
+        foreach (var sceneLight in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+        {
+            if (sceneLight.type == LightType.Directional)
+                sceneLight.enabled = false;
+        }
+
+        DynamicGI.UpdateEnvironment();
+    }
+
+    private static void AddWarmLampLight(GameObject lamp, string lightName)
+    {
+        var lightObject = new GameObject(lightName);
+        lightObject.transform.SetParent(lamp.transform, false);
+        lightObject.transform.localPosition = new Vector3(0f, 0.15f, 0f);
+
+        var lampLight = lightObject.AddComponent<Light>();
+        lampLight.type = LightType.Point;
+        lampLight.color = new Color(1f, 0.34f, 0.12f, 1f);
+        lampLight.intensity = 1.8f;
+        lampLight.range = 4.5f;
+        lampLight.shadows = LightShadows.None;
+        lampLight.bounceIntensity = 0f;
     }
 
     private static TeleportationProvider BuildPlayerAndMiniature(Transform root, Transform mazeRoot, MazeState mazeState,
@@ -223,8 +275,8 @@ public static class BuildCorridorPrototype
         interaction.mazeState = mazeState;
         interaction.targetLayers = 1 << targetLayer;
         interaction.rayLength = 1.5f;
-        interaction.leftHandMiniatureHeightAboveController = 0.025f;
-        interaction.leftHandMiniatureForwardOffset = 0.05f;
+        interaction.leftHandMiniatureLocalPosition = new Vector3(0.025f, 0.012f, 0.01f);
+        interaction.leftHandMiniatureLocalEulerOffset = new Vector3(0f, 0f, -90f);
         interaction.pointerCurveSag = 0.2f;
 
         var pointer = interactionObject.AddComponent<LineRenderer>();
