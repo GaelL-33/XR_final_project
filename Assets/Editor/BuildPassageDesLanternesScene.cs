@@ -124,14 +124,13 @@ public static class BuildPassageDesLanternesScene
         interaction.haptics = haptics;
         interaction.targetLayers = 1 << targetLayer;
         interaction.rayLength = 1.5f;
-        interaction.pointerCurveSag = 0.2f;
         interaction.leftHandMiniatureLocalPosition = new Vector3(0.06f, 0.01f, 0.065f);
         interaction.leftHandMiniatureLocalEulerOffset = new Vector3(0f, 0f, -90f);
 
         var pointer = interactionObj.AddComponent<LineRenderer>();
         pointer.enabled = false;
         pointer.useWorldSpace = true;
-        pointer.positionCount = 17;
+        pointer.positionCount = 2;
         pointer.sharedMaterial = mats.MagicPointer;
         pointer.startColor = new Color(0.25f, 0.84f, 1f, 0.92f);
         pointer.endColor = new Color(0.25f, 0.84f, 1f, 0.25f);
@@ -433,6 +432,11 @@ public static class BuildPassageDesLanternesScene
         farCaster.enableStabilization = false;
         worldLine.overrideLineOrigin = false;
         worldLine.curveStartOffset = 0f;
+        worldLine.noValidHitProperties.smoothlyCurveLine = false;
+        worldLine.hoverHitProperties.smoothlyCurveLine = false;
+        worldLine.selectHitProperties.smoothlyCurveLine = false;
+        worldLine.uiHitProperties.smoothlyCurveLine = false;
+        worldLine.uiPressHitProperties.smoothlyCurveLine = false;
         teleportLine.overrideInteractorLineOrigin = false;
         interaction.rightWorldPointerLine = worldLine.lineRenderer;
 
@@ -1391,7 +1395,7 @@ public static class BuildPassageDesLanternesScene
                 new Vector3(wallT, wallH, vw.zMax - vw.zMin), s, mats.MiniatureWall);
         }
 
-        // 1. MINIATURE INTRO GATE ("center_gate") with matching diamond emblem + target collider for curved pointer + B!
+        // 1. Miniature intro gate ("center_gate") with matching diamond emblem and B-button target collider.
         var introTargetObj = new GameObject("Intro Gate Miniature Target");
         introTargetObj.layer = targetLayer;
         introTargetObj.transform.SetParent(miniRoot, false);
@@ -1481,7 +1485,7 @@ public static class BuildPassageDesLanternesScene
         var lockedClasp = CreateMiniBox(miniSlidingRoot, "MiniPartLockedClasp",
             new Vector3(0f, 3.55f, 0f), new Vector3(0.95f, 0.65f, 0.95f), s, mats.StoneDark);
 
-        // Revealable forgiving grab handle (primary direct grab-to-slide + curved pointer B-button fallback!)
+        // The unlocked handle supports direct grabbing. The miniature pointer and B also move the partition.
         // Starts hidden in Edit Mode matching startsLocked=true; smoothly rises when Bay 5 is solved!
         var grabHandleObj = new GameObject("Miniature Partition Grab Handle");
         grabHandleObj.transform.SetParent(miniSlidingRoot, false);
@@ -1505,7 +1509,7 @@ public static class BuildPassageDesLanternesScene
         if (partDef.startsLocked)
             grabHandleObj.SetActive(false);
 
-        // Trigger collider on MiniatureTarget layer for right-hand curved pointer + B-button alternative!
+        // Trigger collider on MiniatureTarget for the right-hand pointer and B-button action.
         var partPointerObj = new GameObject("PartitionPointerTarget");
         partPointerObj.layer = targetLayer;
         partPointerObj.transform.SetParent(miniSlidingRoot, false);

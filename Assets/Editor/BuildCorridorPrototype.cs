@@ -277,12 +277,11 @@ public static class BuildCorridorPrototype
         interaction.rayLength = 1.5f;
         interaction.leftHandMiniatureLocalPosition = new Vector3(0.025f, 0.012f, 0.01f);
         interaction.leftHandMiniatureLocalEulerOffset = new Vector3(0f, 0f, -90f);
-        interaction.pointerCurveSag = 0.2f;
 
         var pointer = interactionObject.AddComponent<LineRenderer>();
         pointer.enabled = false;
         pointer.useWorldSpace = true;
-        pointer.positionCount = 17;
+        pointer.positionCount = 2;
         pointer.sharedMaterial = pointerMaterial;
         pointer.startColor = new Color(0.25f, 0.8f, 1f, 0.9f);
         pointer.endColor = new Color(0.25f, 0.8f, 1f, 0.25f);
