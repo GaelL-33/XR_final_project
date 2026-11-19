@@ -9,6 +9,7 @@ using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using UnityEngine.XR.Interaction.Toolkit.Locomotion.Gravity;
 using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
 
 public static class BuildPassageDesLanternesScene
@@ -372,6 +373,7 @@ public static class BuildPassageDesLanternesScene
             throw new InvalidOperationException("XR Origin prefab has no Main Camera.");
 
         ConfigureComfortableLocomotion(rig);
+        ConfigureSpawn(xrOrigin);
 
         rightNearFar = null;
         foreach (var nfi in rig.GetComponentsInChildren<NearFarInteractor>(true))
@@ -384,6 +386,18 @@ public static class BuildPassageDesLanternesScene
         }
 
         return rig;
+    }
+
+    public static void ConfigureSpawn(XROrigin xrOrigin)
+    {
+        foreach (var gravity in xrOrigin.GetComponentsInChildren<GravityProvider>(true))
+        {
+            gravity.useGravity = false;
+            PrefabUtility.RecordPrefabInstancePropertyModifications(gravity);
+        }
+
+        if (!xrOrigin.TryGetComponent<QuestSpawnAlignment>(out _))
+            xrOrigin.gameObject.AddComponent<QuestSpawnAlignment>();
     }
 
     private static void ConfigureComfortableLocomotion(GameObject rig)
