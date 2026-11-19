@@ -16,7 +16,7 @@ The player explores a 15 m × 15 m starry night stone maze while holding a synch
 | **Teleport** | Thumbstick forward + release on illuminated floor zones (smooth locomotion disabled for comfort) |
 | **Snap Turn** | Thumbstick left / right (continuous turn disabled) |
 | **Consult 1:100 Miniature** | Hold **Left Controller** palm-up (local pose offset & `-90°` roll are serialized on `XRControllerMiniatureInteraction`) |
-| **Operate Miniature Gate / Partition (Ray)** | Aim the **Right Controller** at a miniature target and press **B** (`secondaryButton`) when the blue pointer appears |
+| **Operate Miniature Gate / Partition (Ray)** | Aim **Right Controller** curved blue pointer at a miniature target and press **B** (`secondaryButton`) |
 | **Slide Atrium Partition (Direct Grab)** | Reach with **Right Controller** onto the unlocked miniature brass handle, hold **Grip** (`Select`), slide North/South between snap detents, and release |
 | **Grab & Dock Lantern** | Hold **Grip** (`Select`) with the right hand on the lantern; place into any of the 36 bay niches (`XRSocketInteractor`) |
 | **Recall Lantern** | Press the **"Rappeler"** button on the Vestibule pedestal (automatic out-of-bounds recovery is also active) |

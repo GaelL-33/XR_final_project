@@ -4839,11 +4839,6 @@ MonoBehaviour:
   filterByProgressionStage: 0
   minVisibleStage: 0
   maxVisibleStage: 7
---- !u!4 &226762114 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 202364688, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-  m_PrefabInstance: {fileID: 330188861}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &227726848
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7425,34 +7420,6 @@ PrefabInstance:
       propertyPath: m_InteractionManager
       value: 
       objectReference: {fileID: 1313097423}
-    - target: {fileID: 1142518704764219382, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-      propertyPath: m_CurveStartOffset
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1142518704764219382, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-      propertyPath: m_OverrideLineOrigin
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1142518704764219382, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-      propertyPath: m_UIHitProperties.m_SmoothlyCurveLine
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1142518704764219382, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-      propertyPath: m_HoverHitProperties.m_SmoothlyCurveLine
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1142518704764219382, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-      propertyPath: m_SelectHitProperties.m_SmoothlyCurveLine
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1142518704764219382, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-      propertyPath: m_NoValidHitProperties.m_SmoothlyCurveLine
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1142518704764219382, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-      propertyPath: m_UIPressHitProperties.m_SmoothlyCurveLine
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 1178791450436251564, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       propertyPath: m_RequestedTrackingOriginMode
       value: 2
@@ -7501,14 +7468,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 1801942220539511183, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-      propertyPath: m_UseLocalSpace
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1801942220539511183, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-      propertyPath: m_AimTargetObject
-      value: 
-      objectReference: {fileID: 0}
     - target: {fileID: 1883230248363655243, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       propertyPath: m_InteractionManager
       value: 
@@ -7521,22 +7480,10 @@ PrefabInstance:
       propertyPath: m_InteractionManager
       value: 
       objectReference: {fileID: 1313097423}
-    - target: {fileID: 2449787133337329439, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-      propertyPath: m_OverrideInteractorLineOrigin
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 2734315883792958320, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       propertyPath: m_InteractionManager
       value: 
       objectReference: {fileID: 1313097423}
-    - target: {fileID: 3074471628601745017, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-      propertyPath: m_CastOrigin
-      value: 
-      objectReference: {fileID: 773190230}
-    - target: {fileID: 3074471628601745017, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-      propertyPath: m_EnableStabilization
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 4343660526480754339, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       propertyPath: m_InteractionManager
       value: 
@@ -13998,14 +13945,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 360b10bcc75642de89e2924779388943, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::XRControllerMiniatureInteraction
-  leftHandPose: {fileID: 226762114}
+  trackingOrigin: {fileID: 330188866}
   miniatureRoot: {fileID: 1834223635}
   mazeState: {fileID: 1237943777}
   mazeAudio: {fileID: 1484408080}
   haptics: {fileID: 1665432928}
   rightNearFarInteractor: {fileID: 330188863}
-  rightTeleportInteractor: {fileID: 1375737369}
-  rightWorldPointerLine: {fileID: 845719447}
   targetLayers:
     serializedVersion: 2
     m_Bits: 256
@@ -14013,6 +13958,7 @@ MonoBehaviour:
   leftHandMiniatureLocalPosition: {x: 0.06, y: 0.01, z: 0.065}
   leftHandMiniatureLocalEulerOffset: {x: 0, y: 0, z: -90}
   rayLength: 1.5
+  pointerCurveSag: 0.2
 --- !u!120 &580344038
 LineRenderer:
   serializedVersion: 3
@@ -14065,6 +14011,21 @@ LineRenderer:
   m_Positions:
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 1}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
   m_Parameters:
     serializedVersion: 3
     widthMultiplier: 1
@@ -17382,11 +17343,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 765399633}
   m_CullTransparentMesh: 1
---- !u!4 &773190230 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 8718302446126152263, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-  m_PrefabInstance: {fileID: 330188861}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &778136196
 GameObject:
   m_ObjectHideFlags: 0
@@ -18580,11 +18536,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 841669967}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!120 &845719447 stripped
-LineRenderer:
-  m_CorrespondingSourceObject: {fileID: 1267965613388650355, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-  m_PrefabInstance: {fileID: 330188861}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &847539069
 GameObject:
   m_ObjectHideFlags: 0
@@ -29439,17 +29390,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4417248129044502496, guid: 54d08ba60661ea943a645c9fdbb4d353, type: 3}
   m_PrefabInstance: {fileID: 1375469937}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1375737369 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 2449787133337329425, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
-  m_PrefabInstance: {fileID: 330188861}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6803edce0201f574f923fd9d10e5b30a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1377003523
 GameObject:
   m_ObjectHideFlags: 0

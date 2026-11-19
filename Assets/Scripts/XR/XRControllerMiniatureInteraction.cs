@@ -2,34 +2,41 @@ using System;
 using UnityEngine;
 using UnityEngine.XR;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using UnityEngine.XR.Interaction.Toolkit.Interactors.Visuals;
 
 public sealed class XRControllerMiniatureInteraction : MonoBehaviour
 {
+    private const int PointerCurveSegments = 16;
     private static readonly RaycastHit[] RaycastHits = new RaycastHit[16];
 
-    public Transform leftHandPose;
+    public Transform trackingOrigin;
     public Transform miniatureRoot;
     public MazeState mazeState;
     public ProceduralMazeAudio mazeAudio;
     public XRHapticsService haptics;
     public NearFarInteractor rightNearFarInteractor;
-    public XRRayInteractor rightTeleportInteractor;
-    public LineRenderer rightWorldPointerLine;
     public LayerMask targetLayers;
     public LineRenderer pointerLine;
     public Vector3 leftHandMiniatureLocalPosition = new Vector3(0.06f, 0.01f, 0.065f);
     public Vector3 leftHandMiniatureLocalEulerOffset = new Vector3(0f, 0f, -90f);
     [Min(0.1f)] public float rayLength = 1.5f;
+    [Min(0f)] public float pointerCurveSag = 0.2f;
 
     public event Action HintButtonPressed;
 
     private InputDevice leftHand;
     private InputDevice rightHand;
+    private readonly Vector3[] pointerPoints = new Vector3[PointerCurveSegments + 1];
     private MiniatureWallTarget currentTarget;
     private bool previousSecondaryButton;
     private bool previousPrimaryButton;
 
-    private void LateUpdate()
+    private void Awake()
+    {
+        HideRightHandStraightRay();
+    }
+
+    private void Update()
     {
         UpdateMiniaturePose();
         UpdatePointerAndInput();
@@ -37,36 +44,62 @@ public sealed class XRControllerMiniatureInteraction : MonoBehaviour
 
     private void OnDisable()
     {
-        ShowPointer(null);
-        previousSecondaryButton = false;
-        previousPrimaryButton = false;
+        SetCurrentTarget(null);
+        if (pointerLine != null)
+            pointerLine.enabled = false;
     }
 
     private void UpdateMiniaturePose()
     {
-        if (miniatureRoot == null || leftHandPose == null || !IsTracked(XRNode.LeftHand, ref leftHand))
+        if (miniatureRoot == null || !TryGetPose(XRNode.LeftHand, ref leftHand, out var position, out var rotation))
             return;
 
-        var miniaturePosition = leftHandPose.TransformPoint(leftHandMiniatureLocalPosition);
-        var miniatureRotation = leftHandPose.rotation * Quaternion.Euler(leftHandMiniatureLocalEulerOffset);
+        var miniaturePosition = position + rotation * leftHandMiniatureLocalPosition;
+        var miniatureRotation = rotation * Quaternion.Euler(leftHandMiniatureLocalEulerOffset);
         miniatureRoot.SetPositionAndRotation(miniaturePosition, miniatureRotation);
         Physics.SyncTransforms();
     }
 
-    private void ShowPointer(MiniatureWallTarget target)
+    private void HideRightHandStraightRay()
     {
-        SetCurrentTarget(target);
-        if (pointerLine != null)
-            pointerLine.enabled = target != null;
-        if (rightWorldPointerLine != null)
-            rightWorldPointerLine.forceRenderingOff = target != null;
+        if (trackingOrigin == null)
+            return;
+
+        foreach (var lineVisual in trackingOrigin.GetComponentsInChildren<XRInteractorLineVisual>(true))
+        {
+            if (!IsUnderRightController(lineVisual.transform))
+                continue;
+
+            var rayInteractor = lineVisual.GetComponent<XRRayInteractor>();
+            if (rayInteractor == null || rayInteractor.lineType != XRRayInteractor.LineType.StraightLine)
+                continue;
+
+            lineVisual.enabled = false;
+            var lineRenderer = lineVisual.GetComponent<LineRenderer>();
+            if (lineRenderer != null)
+                lineRenderer.enabled = false;
+        }
+    }
+
+    private bool IsUnderRightController(Transform target)
+    {
+        for (var current = target; current != null && current != trackingOrigin; current = current.parent)
+        {
+            if (current.name == "Right Controller")
+                return true;
+        }
+
+        return false;
     }
 
     private void UpdatePointerAndInput()
     {
-        if (!IsTracked(XRNode.RightHand, ref rightHand))
+        if (pointerLine == null || mazeState == null ||
+            !TryGetPose(XRNode.RightHand, ref rightHand, out var position, out var rotation))
         {
-            ShowPointer(null);
+            SetCurrentTarget(null);
+            if (pointerLine != null)
+                pointerLine.enabled = false;
             previousSecondaryButton = false;
             previousPrimaryButton = false;
             return;
@@ -78,55 +111,69 @@ public sealed class XRControllerMiniatureInteraction : MonoBehaviour
             HintButtonPressed?.Invoke();
         previousPrimaryButton = primaryPressed;
 
-        var secondaryPressed = rightHand.TryGetFeatureValue(CommonUsages.secondaryButton, out var secondaryButton) && secondaryButton;
-        var activate = secondaryPressed && !previousSecondaryButton;
-        previousSecondaryButton = secondaryPressed;
-
-        // The teleport ray and ongoing world selections own the pointer in those modes.
-        if (pointerLine == null || mazeState == null || rightNearFarInteractor == null ||
-            !rightNearFarInteractor.isActiveAndEnabled || rightNearFarInteractor.hasSelection ||
-            (rightTeleportInteractor != null && rightTeleportInteractor.isActiveAndEnabled))
+        // Pause miniature curved pointer while the right hand is actively holding a world object (e.g., lantern or handle)
+        if (rightNearFarInteractor != null && rightNearFarInteractor.hasSelection)
         {
-            ShowPointer(null);
+            SetCurrentTarget(null);
+            pointerLine.enabled = false;
+            previousSecondaryButton = false;
             return;
         }
 
-        var hovered = TraceMiniaturePointer(rightNearFarInteractor.curveOrigin);
-        ShowPointer(hovered);
-        if (activate && hovered != null)
-            ActivateMiniatureTarget(hovered);
-    }
+        pointerLine.enabled = true;
+        var direction = rotation * Vector3.forward;
+        for (var i = 0; i <= PointerCurveSegments; i++)
+        {
+            var t = i / (float)PointerCurveSegments;
+            pointerPoints[i] = position + direction * (rayLength * t) + Vector3.down * (pointerCurveSag * t * t);
+        }
 
-    private MiniatureWallTarget TraceMiniaturePointer(Transform aim)
-    {
-        var ray = new Ray(aim.position, aim.forward);
-        var hitCount = Physics.RaycastNonAlloc(ray, RaycastHits, rayLength, targetLayers, QueryTriggerInteraction.Collide);
         MiniatureWallTarget hovered = null;
-        var nearestDistance = float.PositiveInfinity;
-        var hitPoint = Vector3.zero;
-        for (var i = 0; i < hitCount; i++)
+        var nearestPathDistance = float.MaxValue;
+        var nearestHitPoint = pointerPoints[PointerCurveSegments];
+        var nearestHitSegment = -1;
+        var distanceBeforeSegment = 0f;
+
+        for (var segmentIndex = 0; segmentIndex < PointerCurveSegments; segmentIndex++)
         {
-            var hit = RaycastHits[i];
-            if (hit.distance >= nearestDistance)
+            var segment = pointerPoints[segmentIndex + 1] - pointerPoints[segmentIndex];
+            var segmentLength = segment.magnitude;
+            if (segmentLength <= 0.0001f)
                 continue;
 
-            var candidate = hit.collider.GetComponentInParent<MiniatureWallTarget>();
-            if (candidate == null || !candidate.isActiveAndEnabled)
-                continue;
+            var hitCount = Physics.RaycastNonAlloc(new Ray(pointerPoints[segmentIndex], segment / segmentLength),
+                RaycastHits, segmentLength, targetLayers, QueryTriggerInteraction.Collide);
 
-            hovered = candidate;
-            nearestDistance = hit.distance;
-            hitPoint = hit.point;
+            for (var hitIndex = 0; hitIndex < hitCount; hitIndex++)
+            {
+                var candidate = RaycastHits[hitIndex].collider.GetComponentInParent<MiniatureWallTarget>();
+                var pathDistance = distanceBeforeSegment + RaycastHits[hitIndex].distance;
+                if (candidate == null || !candidate.isActiveAndEnabled || pathDistance >= nearestPathDistance)
+                    continue;
+
+                hovered = candidate;
+                nearestPathDistance = pathDistance;
+                nearestHitPoint = RaycastHits[hitIndex].point;
+                nearestHitSegment = segmentIndex;
+            }
+
+            distanceBeforeSegment += segmentLength;
         }
 
-        if (hovered != null)
+        SetCurrentTarget(hovered);
+        var linePointCount = nearestHitSegment >= 0 ? nearestHitSegment + 2 : PointerCurveSegments + 1;
+        pointerLine.positionCount = linePointCount;
+        for (var i = 0; i < linePointCount; i++)
         {
-            pointerLine.positionCount = 2;
-            pointerLine.SetPosition(0, ray.origin);
-            pointerLine.SetPosition(1, hitPoint);
+            var point = nearestHitSegment >= 0 && i == linePointCount - 1 ? nearestHitPoint : pointerPoints[i];
+            pointerLine.SetPosition(i, point);
         }
 
-        return hovered;
+        var secondaryPressed = rightHand.TryGetFeatureValue(CommonUsages.secondaryButton, out var secondaryButton) && secondaryButton;
+        if (secondaryPressed && !previousSecondaryButton && currentTarget != null)
+            ActivateMiniatureTarget(currentTarget);
+
+        previousSecondaryButton = secondaryPressed;
     }
 
     private void ActivateMiniatureTarget(MiniatureWallTarget target)
@@ -170,12 +217,24 @@ public sealed class XRControllerMiniatureInteraction : MonoBehaviour
         }
     }
 
-    private static bool IsTracked(XRNode node, ref InputDevice device)
+    private bool TryGetPose(XRNode node, ref InputDevice device, out Vector3 worldPosition, out Quaternion worldRotation)
     {
+        worldPosition = default;
+        worldRotation = Quaternion.identity;
+        if (trackingOrigin == null)
+            return false;
+
         if (!device.isValid)
             device = InputDevices.GetDeviceAtXRNode(node);
 
-        return device.TryGetFeatureValue(CommonUsages.isTracked, out var tracked) && tracked;
+        if (!device.isValid ||
+            !device.TryGetFeatureValue(CommonUsages.devicePosition, out var localPosition) ||
+            !device.TryGetFeatureValue(CommonUsages.deviceRotation, out var localRotation))
+            return false;
+
+        worldPosition = trackingOrigin.TransformPoint(localPosition);
+        worldRotation = trackingOrigin.rotation * localRotation;
+        return true;
     }
 
     private void SetCurrentTarget(MiniatureWallTarget target)

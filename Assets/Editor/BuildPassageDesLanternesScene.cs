@@ -7,11 +7,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
-using UnityEngine.XR.Interaction.Toolkit.Inputs;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
-using UnityEngine.XR.Interaction.Toolkit.Interactors.Casters;
-using UnityEngine.XR.Interaction.Toolkit.Interactors.Visuals;
 using UnityEngine.XR.Interaction.Toolkit.Locomotion.Gravity;
 using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
 
@@ -60,7 +57,7 @@ public static class BuildPassageDesLanternesScene
 
         // 2. Player Rig (Quest 3 XRI Starter Assets baseline, comfort locomotion)
         var rig = BuildPlayerRig(root.transform, prefabs.QuestRig, definition, interactionManager,
-            out var xrOrigin, out var headCamera, out var teleportationProvider);
+            out var xrOrigin, out var headCamera, out var teleportationProvider, out var rightNearFar);
         haptics.playerRigRoot = rig.transform;
 
         // 3. World Maze Architecture & Puzzles
@@ -117,20 +114,22 @@ public static class BuildPassageDesLanternesScene
         var interactionObj = new GameObject("Controller Miniature Interaction");
         interactionObj.transform.SetParent(root.transform, false);
         var interaction = interactionObj.AddComponent<XRControllerMiniatureInteraction>();
-        ConfigureControllerAim(xrOrigin, interaction);
+        interaction.trackingOrigin = rig.transform;
         interaction.miniatureRoot = miniatureRoot;
         interaction.mazeState = mazeState;
         interaction.mazeAudio = mazeAudio;
         interaction.haptics = haptics;
+        interaction.rightNearFarInteractor = rightNearFar;
         interaction.targetLayers = 1 << targetLayer;
         interaction.rayLength = 1.5f;
+        interaction.pointerCurveSag = 0.2f;
         interaction.leftHandMiniatureLocalPosition = new Vector3(0.06f, 0.01f, 0.065f);
         interaction.leftHandMiniatureLocalEulerOffset = new Vector3(0f, 0f, -90f);
 
         var pointer = interactionObj.AddComponent<LineRenderer>();
         pointer.enabled = false;
         pointer.useWorldSpace = true;
-        pointer.positionCount = 2;
+        pointer.positionCount = 17;
         pointer.sharedMaterial = mats.MagicPointer;
         pointer.startColor = new Color(0.25f, 0.84f, 1f, 0.92f);
         pointer.endColor = new Color(0.25f, 0.84f, 1f, 0.25f);
@@ -273,11 +272,8 @@ public static class BuildPassageDesLanternesScene
             issues.Add("Missing LanternItem or homeTransform reference.");
 
         var miniInteraction = root.GetComponentInChildren<XRControllerMiniatureInteraction>(true);
-        if (miniInteraction == null || miniInteraction.miniatureRoot == null || miniInteraction.pointerLine == null ||
-            miniInteraction.targetLayers.value == 0 || miniInteraction.leftHandPose == null ||
-            miniInteraction.rightNearFarInteractor == null || miniInteraction.rightTeleportInteractor == null ||
-            miniInteraction.rightWorldPointerLine == null)
-            issues.Add("Missing XRControllerMiniatureInteraction or its controller/pointer wiring.");
+        if (miniInteraction == null || miniInteraction.miniatureRoot == null || miniInteraction.pointerLine == null || miniInteraction.targetLayers.value == 0)
+            issues.Add("Missing XRControllerMiniatureInteraction or targetLayers.");
 
         // Check active real-time lights count for Quest mobile URP budget
         var activePointLights = 0;
@@ -352,7 +348,7 @@ public static class BuildPassageDesLanternesScene
 
     private static GameObject BuildPlayerRig(Transform root, GameObject rigPrefab, MazeDefinition definition,
         XRInteractionManager interactionManager, out XROrigin xrOrigin, out Camera headCamera,
-        out TeleportationProvider teleportationProvider)
+        out TeleportationProvider teleportationProvider, out NearFarInteractor rightNearFar)
     {
         var rig = PrefabUtility.InstantiatePrefab(rigPrefab) as GameObject;
         if (rig == null)
@@ -365,9 +361,8 @@ public static class BuildPassageDesLanternesScene
         rig.SetActive(true);
 
         xrOrigin = rig.GetComponent<XROrigin>();
-        if (xrOrigin == null)
-            throw new InvalidOperationException("XR rig prefab has no XROrigin.");
-        xrOrigin.RequestedTrackingOriginMode = XROrigin.TrackingOriginMode.Floor;
+        if (xrOrigin != null)
+            xrOrigin.RequestedTrackingOriginMode = XROrigin.TrackingOriginMode.Floor;
 
         teleportationProvider = rig.GetComponentInChildren<TeleportationProvider>(true);
         if (teleportationProvider == null)
@@ -379,6 +374,16 @@ public static class BuildPassageDesLanternesScene
 
         ConfigureComfortableLocomotion(rig);
         ConfigureSpawn(xrOrigin);
+
+        rightNearFar = null;
+        foreach (var nfi in rig.GetComponentsInChildren<NearFarInteractor>(true))
+        {
+            if (nfi.handedness == InteractorHandedness.Right || nfi.transform.parent.name.Contains("Right"))
+            {
+                rightNearFar = nfi;
+                break;
+            }
+        }
 
         return rig;
     }
@@ -393,57 +398,6 @@ public static class BuildPassageDesLanternesScene
 
         if (!xrOrigin.TryGetComponent<QuestSpawnAlignment>(out _))
             xrOrigin.gameObject.AddComponent<QuestSpawnAlignment>();
-    }
-
-    public static void ConfigureControllerAim(XROrigin xrOrigin, XRControllerMiniatureInteraction interaction)
-    {
-        foreach (var interactor in xrOrigin.GetComponentsInChildren<NearFarInteractor>(true))
-        {
-            if (interactor.handedness == InteractorHandedness.Left)
-                interaction.leftHandPose = interactor.transform.parent;
-            else if (interactor.handedness == InteractorHandedness.Right)
-                interaction.rightNearFarInteractor = interactor;
-        }
-
-        foreach (var ray in xrOrigin.GetComponentsInChildren<XRRayInteractor>(true))
-        {
-            if (ray.handedness == InteractorHandedness.Right &&
-                ray.interactionLayers.value == InteractionLayerMask.GetMask("Teleport"))
-                interaction.rightTeleportInteractor = ray;
-        }
-
-        if (interaction.leftHandPose == null || interaction.rightNearFarInteractor == null ||
-            interaction.rightTeleportInteractor == null)
-            throw new InvalidOperationException("Could not find the left/right Near-Far and right teleport interactors.");
-
-        var teleport = interaction.rightTeleportInteractor;
-        var aim = teleport.rayOriginTransform;
-        var stabilizer = aim.GetComponent<XRTransformStabilizer>();
-        var farCaster = interaction.rightNearFarInteractor.GetComponent<CurveInteractionCaster>();
-        var worldLine = interaction.rightNearFarInteractor.GetComponentInChildren<CurveVisualController>(true);
-        var teleportLine = teleport.GetComponent<XRInteractorLineVisual>();
-        if (stabilizer == null || farCaster == null || worldLine == null || teleportLine == null)
-            throw new InvalidOperationException("Could not find the right-hand aim stabilizer, caster, or line visuals.");
-
-        // The stabilizer and its target share Camera Offset. Local stabilization follows rig turns/teleports immediately.
-        stabilizer.useLocalSpace = true;
-        stabilizer.aimTarget = null;
-        farCaster.castOrigin = aim;
-        farCaster.enableStabilization = false;
-        worldLine.overrideLineOrigin = false;
-        worldLine.curveStartOffset = 0f;
-        worldLine.noValidHitProperties.smoothlyCurveLine = false;
-        worldLine.hoverHitProperties.smoothlyCurveLine = false;
-        worldLine.selectHitProperties.smoothlyCurveLine = false;
-        worldLine.uiHitProperties.smoothlyCurveLine = false;
-        worldLine.uiPressHitProperties.smoothlyCurveLine = false;
-        teleportLine.overrideInteractorLineOrigin = false;
-        interaction.rightWorldPointerLine = worldLine.lineRenderer;
-
-        PrefabUtility.RecordPrefabInstancePropertyModifications(stabilizer);
-        PrefabUtility.RecordPrefabInstancePropertyModifications(farCaster);
-        PrefabUtility.RecordPrefabInstancePropertyModifications(worldLine);
-        PrefabUtility.RecordPrefabInstancePropertyModifications(teleportLine);
     }
 
     private static void ConfigureComfortableLocomotion(GameObject rig)
@@ -1395,7 +1349,7 @@ public static class BuildPassageDesLanternesScene
                 new Vector3(wallT, wallH, vw.zMax - vw.zMin), s, mats.MiniatureWall);
         }
 
-        // 1. Miniature intro gate ("center_gate") with matching diamond emblem and B-button target collider.
+        // 1. MINIATURE INTRO GATE ("center_gate") with matching diamond emblem + target collider for curved pointer + B!
         var introTargetObj = new GameObject("Intro Gate Miniature Target");
         introTargetObj.layer = targetLayer;
         introTargetObj.transform.SetParent(miniRoot, false);
@@ -1485,7 +1439,7 @@ public static class BuildPassageDesLanternesScene
         var lockedClasp = CreateMiniBox(miniSlidingRoot, "MiniPartLockedClasp",
             new Vector3(0f, 3.55f, 0f), new Vector3(0.95f, 0.65f, 0.95f), s, mats.StoneDark);
 
-        // The unlocked handle supports direct grabbing. The miniature pointer and B also move the partition.
+        // Revealable forgiving grab handle (primary direct grab-to-slide + curved pointer B-button fallback!)
         // Starts hidden in Edit Mode matching startsLocked=true; smoothly rises when Bay 5 is solved!
         var grabHandleObj = new GameObject("Miniature Partition Grab Handle");
         grabHandleObj.transform.SetParent(miniSlidingRoot, false);
@@ -1509,7 +1463,7 @@ public static class BuildPassageDesLanternesScene
         if (partDef.startsLocked)
             grabHandleObj.SetActive(false);
 
-        // Trigger collider on MiniatureTarget for the right-hand pointer and B-button action.
+        // Trigger collider on MiniatureTarget layer for right-hand curved pointer + B-button alternative!
         var partPointerObj = new GameObject("PartitionPointerTarget");
         partPointerObj.layer = targetLayer;
         partPointerObj.transform.SetParent(miniSlidingRoot, false);
