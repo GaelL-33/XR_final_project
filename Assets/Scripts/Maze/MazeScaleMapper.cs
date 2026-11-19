@@ -23,4 +23,25 @@ public sealed class MazeScaleMapper : MonoBehaviour
         miniatureLocalPosition.y = miniatureLocalHeight;
         return miniatureRoot.TransformPoint(miniatureLocalPosition);
     }
+
+    public Quaternion WorldForwardToMiniatureRotation(Vector3 worldForward)
+    {
+        if (worldMazeRoot == null || miniatureRoot == null)
+            return Quaternion.identity;
+
+        var localDir = worldMazeRoot.InverseTransformDirection(worldForward);
+        localDir.y = 0f;
+        if (localDir.sqrMagnitude < 0.0001f)
+            localDir = Vector3.forward;
+        else
+            localDir.Normalize();
+
+        return miniatureRoot.rotation * Quaternion.LookRotation(localDir, Vector3.up);
+    }
+
+    public Vector3 MiniatureLocalToWorld(Vector3 miniatureLocalPosition)
+    {
+        var worldLocal = miniatureLocalPosition / Mathf.Max(0.0001f, metresToMiniatureScale);
+        return worldMazeRoot != null ? worldMazeRoot.TransformPoint(worldLocal) : worldLocal;
+    }
 }
