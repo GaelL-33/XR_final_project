@@ -1,0 +1,152 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8006458c3b9a45b887f0a702e94150cb, type: 3}
+  m_Name: PassageDesLanternesDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::MazeDefinition
+  metresToMiniatureScale: 0.01
+  spawnWorldPosition: {x: -3, y: 0, z: -6}
+  spawnYawDegrees: 0
+  lanternPedestalWorldPosition: {x: -3, y: 0.98, z: 0}
+  mazeBoundsMin: {x: -7.75, y: -0.45, z: -7.75}
+  mazeBoundsMax: {x: 7.75, y: 5, z: 7.75}
+  mechanisms:
+  - id: center_gate
+    startsLowered: 0
+    allowDirectMiniatureToggle: 1
+    lowerDistance: 4.6
+    animationSeconds: 0.7
+  - id: atrium_lock
+    startsLowered: 0
+    allowDirectMiniatureToggle: 0
+    lowerDistance: 4.6
+    animationSeconds: 0.9
+  - id: exit_gate
+    startsLowered: 0
+    allowDirectMiniatureToggle: 0
+    lowerDistance: 4.6
+    animationSeconds: 1
+  lanternBays:
+  - id: bay_1
+    numeral: I
+    displayNameFr: Croissant
+    emblemKind: 0
+    emblemColor: {r: 0.84, g: 0.75, b: 0.56, a: 1}
+    backsOntoAtriumRail: 0
+    nicheCount: 6
+    correctNicheIndex: -1
+    worldCenter: {x: -6, y: 0, z: -1.29}
+    inwardNormal: {x: 0, y: 0, z: 1}
+  - id: bay_2
+    numeral: II
+    displayNameFr: Pilier
+    emblemKind: 1
+    emblemColor: {r: 0.68, g: 0.76, b: 0.84, a: 1}
+    backsOntoAtriumRail: 0
+    nicheCount: 6
+    correctNicheIndex: -1
+    worldCenter: {x: -4.71, y: 0, z: 3}
+    inwardNormal: {x: -1, y: 0, z: 0}
+  - id: bay_3
+    numeral: III
+    displayNameFr: "\xC9toile"
+    emblemKind: 2
+    emblemColor: {r: 0.92, g: 0.78, b: 0.48, a: 1}
+    backsOntoAtriumRail: 0
+    nicheCount: 6
+    correctNicheIndex: -1
+    worldCenter: {x: -6, y: 0, z: 7.29}
+    inwardNormal: {x: 0, y: 0, z: -1}
+  - id: bay_4
+    numeral: IV
+    displayNameFr: Sablier
+    emblemKind: 3
+    emblemColor: {r: 0.74, g: 0.66, b: 0.82, a: 1}
+    backsOntoAtriumRail: 0
+    nicheCount: 6
+    correctNicheIndex: -1
+    worldCenter: {x: 0, y: 0, z: 4.71}
+    inwardNormal: {x: 0, y: 0, z: 1}
+  - id: bay_5
+    numeral: V
+    displayNameFr: Arche
+    emblemKind: 4
+    emblemColor: {r: 0.96, g: 0.74, b: 0.36, a: 1}
+    backsOntoAtriumRail: 1
+    nicheCount: 6
+    correctNicheIndex: 5
+    worldCenter: {x: 3, y: 0, z: 4.71}
+    inwardNormal: {x: 0, y: 0, z: 1}
+  - id: bay_6
+    numeral: VI
+    displayNameFr: Cadran
+    emblemKind: 5
+    emblemColor: {r: 0.62, g: 0.82, b: 0.74, a: 1}
+    backsOntoAtriumRail: 0
+    nicheCount: 6
+    correctNicheIndex: -1
+    worldCenter: {x: 6, y: 0, z: 4.71}
+    inwardNormal: {x: 0, y: 0, z: 1}
+  atriumPartition:
+    id: atrium_partition
+    startsLocked: 1
+    initialPosition: 1
+    railWorldX: 2.84
+    entryPositionWorldZ: 1.1
+    exitPositionWorldZ: -1.1
+    slideSeconds: 0.78
+    travelSafetyMin: {x: 2.42, y: -0.5, z: -2.25}
+    travelSafetyMax: {x: 3.58, y: 4, z: 2.25}
+  hints:
+  - stage: 0
+    highlightLandmarkId: center_gate
+    tier1Fr: "Observez le losange grav\xE9 devant vous, puis retrouvez-le sur la
+      maquette."
+    tier2Fr: Pointez la porte miniature avec votre main droite.
+    tier3Fr: Visez la porte sur la maquette et appuyez sur B pour l'abaisser.
+  - stage: 1
+    highlightLandmarkId: lantern_pedestal
+    tier1Fr: Une lanterne vous attend sur son socle dans le vestibule.
+    tier2Fr: Prenez la lanterne avant d'explorer la galerie des six baies.
+    tier3Fr: "Approchez la main droite de la lanterne et pressez la poign\xE9e (Grip)."
+  - stage: 2
+    highlightLandmarkId: bay_5
+    tier1Fr: 'Sur la maquette, suivez le rail de l''atrium : contre quelle baie s''appuie-t-il
+      ?'
+    tier2Fr: "Le rail aboutit derri\xE8re la baie V (Arche), au nord-est de la galerie."
+    tier3Fr: "Approchez la lanterne de la baie V : la veine dor\xE9e d\xE9signe la
+      niche en haut \xE0 droite."
+  - stage: 3
+    highlightLandmarkId: atrium_partition
+    tier1Fr: "Le verrou est lev\xE9 et une poign\xE9e est apparue sur la cloison
+      de la maquette."
+    tier2Fr: "Ouvrez le passage nord pour rejoindre l'\xEElot central."
+    tier3Fr: "Glissez la poign\xE9e vers le nord (ou visez-la + B), puis t\xE9l\xE9portez-vous
+      sur l'\xEElot."
+  - stage: 4
+    highlightLandmarkId: atrium_partition
+    tier1Fr: "L'\xEElot reste s\xFBr dans les deux positions : v\xE9rifiez votre
+      marqueur."
+    tier2Fr: "Faites maintenant glisser la cloison c\xF4t\xE9 sud pour ouvrir l'autre
+      rive."
+    tier3Fr: "Glissez la poign\xE9e vers le sud (ou visez-la + B), puis traversez
+      vers le levier."
+  - stage: 5
+    highlightLandmarkId: exit_lever
+    tier1Fr: Un levier grandeur nature se dresse devant l'arche sud.
+    tier2Fr: "Abaissez-le pour d\xE9verrouiller la Porte de l'Aube aper\xE7ue au
+      d\xE9part."
+    tier3Fr: "Saisissez ou activez le levier, puis franchissez l'arche dor\xE9e."
+  - stage: 6
+    highlightLandmarkId: exit_gate
+    tier1Fr: "La Porte de l'Aube s'est abaiss\xE9e devant vous."
+    tier2Fr: "Suivez la tra\xEEn\xE9e lumineuse jusqu'au sanctuaire de sortie."
+    tier3Fr: "T\xE9l\xE9portez-vous dans le sanctuaire dor\xE9 pour terminer la travers\xE9e."
