@@ -270,7 +270,7 @@ public static class BuildCorridorPrototype
         var interactionObject = new GameObject("Controller Miniature Interaction");
         interactionObject.transform.SetParent(root, false);
         var interaction = interactionObject.AddComponent<XRControllerMiniatureInteraction>();
-        interaction.trackingOrigin = rig.transform;
+        BuildPassageDesLanternesScene.ConfigureControllerAim(xrOrigin, interaction);
         interaction.miniatureRoot = miniRoot;
         interaction.mazeState = mazeState;
         interaction.targetLayers = 1 << targetLayer;
