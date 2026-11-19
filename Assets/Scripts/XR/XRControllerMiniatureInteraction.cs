@@ -1,7 +1,8 @@
+using System;
 using UnityEngine;
+using UnityEngine.XR;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 using UnityEngine.XR.Interaction.Toolkit.Interactors.Visuals;
-using UnityEngine.XR;
 
 public sealed class XRControllerMiniatureInteraction : MonoBehaviour
 {
@@ -11,18 +12,24 @@ public sealed class XRControllerMiniatureInteraction : MonoBehaviour
     public Transform trackingOrigin;
     public Transform miniatureRoot;
     public MazeState mazeState;
+    public ProceduralMazeAudio mazeAudio;
+    public XRHapticsService haptics;
+    public NearFarInteractor rightNearFarInteractor;
     public LayerMask targetLayers;
     public LineRenderer pointerLine;
-    public Vector3 leftHandMiniatureLocalPosition = new Vector3(0.025f, 0.012f, 0.01f);
+    public Vector3 leftHandMiniatureLocalPosition = new Vector3(0.06f, 0.01f, 0.065f);
     public Vector3 leftHandMiniatureLocalEulerOffset = new Vector3(0f, 0f, -90f);
     [Min(0.1f)] public float rayLength = 1.5f;
     [Min(0f)] public float pointerCurveSag = 0.2f;
+
+    public event Action HintButtonPressed;
 
     private InputDevice leftHand;
     private InputDevice rightHand;
     private readonly Vector3[] pointerPoints = new Vector3[PointerCurveSegments + 1];
     private MiniatureWallTarget currentTarget;
     private bool previousSecondaryButton;
+    private bool previousPrimaryButton;
 
     private void Awake()
     {
@@ -94,6 +101,22 @@ public sealed class XRControllerMiniatureInteraction : MonoBehaviour
             if (pointerLine != null)
                 pointerLine.enabled = false;
             previousSecondaryButton = false;
+            previousPrimaryButton = false;
+            return;
+        }
+
+        // Optional A-button shortcut for escalating French hint
+        var primaryPressed = rightHand.TryGetFeatureValue(CommonUsages.primaryButton, out var primaryButton) && primaryButton;
+        if (primaryPressed && !previousPrimaryButton)
+            HintButtonPressed?.Invoke();
+        previousPrimaryButton = primaryPressed;
+
+        // Pause miniature curved pointer while the right hand is actively holding a world object (e.g., lantern or handle)
+        if (rightNearFarInteractor != null && rightNearFarInteractor.hasSelection)
+        {
+            SetCurrentTarget(null);
+            pointerLine.enabled = false;
+            previousSecondaryButton = false;
             return;
         }
 
@@ -115,6 +138,9 @@ public sealed class XRControllerMiniatureInteraction : MonoBehaviour
         {
             var segment = pointerPoints[segmentIndex + 1] - pointerPoints[segmentIndex];
             var segmentLength = segment.magnitude;
+            if (segmentLength <= 0.0001f)
+                continue;
+
             var hitCount = Physics.RaycastNonAlloc(new Ray(pointerPoints[segmentIndex], segment / segmentLength),
                 RaycastHits, segmentLength, targetLayers, QueryTriggerInteraction.Collide);
 
@@ -122,7 +148,7 @@ public sealed class XRControllerMiniatureInteraction : MonoBehaviour
             {
                 var candidate = RaycastHits[hitIndex].collider.GetComponentInParent<MiniatureWallTarget>();
                 var pathDistance = distanceBeforeSegment + RaycastHits[hitIndex].distance;
-                if (candidate == null || pathDistance >= nearestPathDistance)
+                if (candidate == null || !candidate.isActiveAndEnabled || pathDistance >= nearestPathDistance)
                     continue;
 
                 hovered = candidate;
@@ -143,11 +169,52 @@ public sealed class XRControllerMiniatureInteraction : MonoBehaviour
             pointerLine.SetPosition(i, point);
         }
 
-        var pressed = rightHand.TryGetFeatureValue(CommonUsages.secondaryButton, out var secondaryButton) && secondaryButton;
-        if (pressed && !previousSecondaryButton && currentTarget != null)
-            mazeState.TryToggleMechanism(currentTarget.mechanismId);
+        var secondaryPressed = rightHand.TryGetFeatureValue(CommonUsages.secondaryButton, out var secondaryButton) && secondaryButton;
+        if (secondaryPressed && !previousSecondaryButton && currentTarget != null)
+            ActivateMiniatureTarget(currentTarget);
 
-        previousSecondaryButton = pressed;
+        previousSecondaryButton = secondaryPressed;
+    }
+
+    private void ActivateMiniatureTarget(MiniatureWallTarget target)
+    {
+        var hitPos = target.transform.position;
+        switch (target.targetKind)
+        {
+            case MiniatureTargetKind.ToggleGate:
+                if (mazeState.TryToggleMechanism(target.mechanismId))
+                {
+                    target.PulseConfirmed();
+                    if (mazeAudio != null)
+                        mazeAudio.PlayOneShot3D(MazeSoundId.MiniatureClick, hitPos, 0.7f);
+                    if (haptics != null)
+                        haptics.PlayMiniatureClick();
+                }
+                else
+                {
+                    if (mazeAudio != null)
+                        mazeAudio.PlayOneShot3D(MazeSoundId.BlockedAction, hitPos, 0.65f);
+                    if (haptics != null)
+                        haptics.PlayRejectionPulse();
+                }
+                break;
+
+            case MiniatureTargetKind.ToggleAtriumPartition:
+                if (mazeState.TryTogglePartitionPosition(out _))
+                {
+                    target.PulseConfirmed();
+                    if (mazeAudio != null)
+                        mazeAudio.PlayOneShot3D(MazeSoundId.MiniatureClick, hitPos, 0.7f);
+                    if (haptics != null)
+                        haptics.PlayMiniatureClick();
+                }
+                break;
+
+            case MiniatureTargetKind.RequestHint:
+                target.PulseConfirmed();
+                HintButtonPressed?.Invoke();
+                break;
+        }
     }
 
     private bool TryGetPose(XRNode node, ref InputDevice device, out Vector3 worldPosition, out Quaternion worldRotation)
@@ -180,6 +247,10 @@ public sealed class XRControllerMiniatureInteraction : MonoBehaviour
 
         currentTarget = target;
         if (currentTarget != null)
+        {
             currentTarget.SetHighlighted(true);
+            if (haptics != null)
+                haptics.PlayMiniatureHover();
+        }
     }
 }

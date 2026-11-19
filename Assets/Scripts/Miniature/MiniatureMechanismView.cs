@@ -8,7 +8,7 @@ public sealed class MiniatureMechanismView : MonoBehaviour
     public Transform visual;
     public Vector3 raisedLocalPosition;
     public Vector3 loweredLocalOffset = Vector3.down * 0.05f;
-    [Min(0f)] public float animationSeconds = 0.2f;
+    [Min(0f)] public float animationSeconds = 0.25f;
 
     private Coroutine movement;
 
@@ -21,19 +21,29 @@ public sealed class MiniatureMechanismView : MonoBehaviour
         }
 
         mazeState.MechanismStateChanged += OnMechanismStateChanged;
+        mazeState.MazeReset += OnMazeReset;
         MoveToState(mazeState.IsLowered(mechanismId), false);
     }
 
     private void OnDestroy()
     {
         if (mazeState != null)
+        {
             mazeState.MechanismStateChanged -= OnMechanismStateChanged;
+            mazeState.MazeReset -= OnMazeReset;
+        }
     }
 
     private void OnMechanismStateChanged(string changedId, bool lowered)
     {
         if (changedId == mechanismId)
             MoveToState(lowered, true);
+    }
+
+    private void OnMazeReset()
+    {
+        if (mazeState != null)
+            MoveToState(mazeState.IsLowered(mechanismId), false);
     }
 
     private void MoveToState(bool lowered, bool animate)
@@ -59,7 +69,8 @@ public sealed class MiniatureMechanismView : MonoBehaviour
         while (elapsed < animationSeconds)
         {
             elapsed += Time.deltaTime;
-            visual.localPosition = Vector3.Lerp(start, destination, Mathf.Clamp01(elapsed / animationSeconds));
+            var t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / animationSeconds));
+            visual.localPosition = Vector3.Lerp(start, destination, t);
             yield return null;
         }
 
